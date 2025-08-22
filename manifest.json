@@ -1,29 +1,30 @@
 {
   "manifest_version": 3,
-  "name": "Wikipedia Türkçe Çevirici",
-  "version": "1.2",
-  "description": "Wiki sayfalarını Türkçeye çeviren Chrome uzantısı  https://discord.com/users/7grizi veya  https://discord.com/users/846377869935378462",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": [
-    "https://*.wikipedia.org/*",
-    "https://*.fandom.com/*",
-    "https://*.wikia.com/*"
+  "name": "Wiki Çevirici",
+  "version": "1.5",
+  "description": "İngilizce metinleri Türkçeye çevir\nhttps://discord.com/users/7grizi",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
   ],
-  "content_scripts": [{
-    "matches": [
-      "https://*.wikipedia.org/*",
-      "https://*.fandom.com/wiki/*",
-      "https://*.wikia.com/wiki/*"
-    ],
-    "js": ["content.js"],
-    "css": ["styles.css"],
-    "run_at": "document_end"
-  }],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Wiki Çeviri"
-  },
+  "host_permissions": [
+    "https://turkish-wiki.preview.emergentagent.com/*",
+    "https://*/*",
+    "http://*/*"
+  ],
   "background": {
     "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Wiki Çevirici"
   }
 }
