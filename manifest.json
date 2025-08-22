@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Wikipedia Türkçe Çevirici",
+  "version": "1.2",
+  "description": "Wiki sayfalarını Türkçeye çeviren Chrome uzantısı  https://discord.com/users/7grizi veya  https://discord.com/users/846377869935378462",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "https://*.wikipedia.org/*",
+    "https://*.fandom.com/*",
+    "https://*.wikia.com/*"
+  ],
+  "content_scripts": [{
+    "matches": [
+      "https://*.wikipedia.org/*",
+      "https://*.fandom.com/wiki/*",
+      "https://*.wikia.com/wiki/*"
+    ],
+    "js": ["content.js"],
+    "css": ["styles.css"],
+    "run_at": "document_end"
+  }],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Wiki Çeviri"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
