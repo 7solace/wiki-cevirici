@@ -2,14 +2,13 @@
   "manifest_version": 3,
   "name": "Wiki Çevirici",
   "version": "1.5",
-  "description": "İngilizce metinleri Türkçeye çevir\nhttps://discord.com/users/7grizi",
+  "description": "İngilizce metinleri Türkçeye çevir",
   "permissions": [
     "activeTab",
     "storage",
     "scripting"
   ],
   "host_permissions": [
-    "https://turkish-wiki.preview.emergentagent.com/*",
     "https://*/*",
     "http://*/*"
   ],
@@ -20,7 +19,8 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "css": ["styles.css"]
+      "css": ["styles.css"],
+      "run_at": "document_end"
     }
   ],
   "action": {
