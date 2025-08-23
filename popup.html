@@ -4,184 +4,183 @@
     <meta charset="utf-8">
     <style>
         body {
-            width: 320px;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #9b92a5 100%);
-            color: white;
+            width: 280px;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             margin: 0;
+            background-color: #f9fafb;
+            color: #374151;
         }
-        .container {
-            padding: 20px;
-        }
+        
         .header {
             text-align: center;
             margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
         }
-        .title {
-            font-size: 20px;
-            font-weight: bold;
-            margin: 10px 0 5px 0;
+        
+        .header h3 {
+            margin: 0;
+            color: #111827;
+            font-size: 18px;
+            font-weight: 600;
         }
-        .subtitle {
-            font-size: 13px;
-            opacity: 0.8;
-        }
-        .status-section {
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-            text-align: center;
-        }
+        
         .toggle-container {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin: 15px 0;
-        }
-        .toggle {
-            position: relative;
-            width: 60px;
-            height: 30px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .toggle.active {
-            background: #10b981;
-        }
-        .toggle-slider {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-        .toggle.active .toggle-slider {
-            transform: translateX(30px);
-        }
-        .controls {
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-        }
-        .btn {
-            width: 100%;
-            padding: 10px;
-            border: none;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
             border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .toggle-container:hover {
+            background-color: #f8f8f8;
+        }
+        
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 14px;
             font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin: 5px 0;
         }
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-        }
-        .btn-secondary {
-            background: rgba(184, 120, 120, 0.2);
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.3);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .shortcut-info {
-            font-size: 11px;
-            text-align: center;
-            opacity: 0.7;
-            margin-top: 15px;
-        }
-        .shortcut {
-            background: rgba(255,255,255,0.2);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
+        
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
+            transition: background-color 0.3s;
         }
+        
         .status-active {
-            background: #10b981;
+            background: #22c55e;
         }
+        
         .status-inactive {
             background: #ef4444;
         }
+        
+        #translatorToggle {
+            width: 44px;
+            height: 24px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+        
+        #translatorToggle::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        #translatorToggle.active {
+            background: #22c55e;
+        }
+        
+        #translatorToggle.active::after {
+            transform: translateX(20px);
+        }
+        
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        button {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        #translateBtn {
+            background: #3b82f6;
+            color: white;
+            border: 1px solid #3b82f6;
+        }
+        
+        #translateBtn:hover {
+            background: #2563eb;
+        }
+        
+        #translateBtn:disabled {
+            background: #d1d5db;
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: #d1d5db;
+        }
+        
+        #restoreBtn {
+            background: #ffffff;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
+        }
+        
+        #restoreBtn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
         .checkbox-container {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin: 10px 0;
+            margin-top: 16px;
             font-size: 13px;
+            color: #6b7280;
         }
-        .checkbox {
-            width: 16px;
-            height: 16px;
+
+        #autoTranslate {
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="title">WikiRater</div>
-            <div class="subtitle">hızlı çeviri (umarım) v1.52</div>
-        </div>
-
-        <div class="status-section">
-            <div class="toggle-container">
-                <span>Kapalı</span>
-                <div class="toggle" id="translatorToggle">
-                    <div class="toggle-slider"></div>
-                </div>
-                <span>Açık</span>
-            </div>
-            <div id="statusText">
-                <span class="status-dot status-inactive"></span>
-                Çevirici Kapalı
-            </div>
-        </div>
-
-        <div class="controls">
-            <button class="btn btn-primary" id="translateBtn">
-                sayfayı çevir
-            </button>
-            <button class="btn btn-secondary" id="restoreBtn" disabled>
-                🔄 Orijinali Göster
-            </button>
-            
-            <div class="checkbox-container">
-                <input type="checkbox" id="autoTranslate" class="checkbox">
-                <label for="autoTranslate">Sayfa yüklendiğinde otomatik çevir</label>
-            </div>
-        </div>
-
-        <div class="shortcut-info">
-            <strong>Kısayollar:</strong><br>
-            <span class="shortcut">Ctrl+Alt+T</span> Sayfayı çevir<br>
-            <span class="shortcut">Ctrl+Alt+R</span> Orijinali göster
-        </div>
+    <div class="header">
+        <h3> WikiRater</h3>
     </div>
-
+    
+    <div class="toggle-container">
+        <div class="status-info">
+            <div class="status-dot status-active"></div>
+            <span id="statusText">Çevirici Açık</span>
+        </div>
+        <div id="translatorToggle" class="active"></div>
+    </div>
+    
+    <div class="buttons">
+        <button id="translateBtn"> Sayfayı Çevir</button>
+        <button id="restoreBtn">Orijinali Göster</button>
+    </div>
+    
+    <div class="checkbox-container">
+        <input type="checkbox" id="autoTranslate">
+        <label for="autoTranslate">Otomatik çeviri</label>
+    </div>
+    
     <script src="popup.js"></script>
 </body>
 </html>
