@@ -1,26 +1,28 @@
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("WikiRater popup yüklendi");
   
-  // Elementleri seç
   const translateBtn = document.getElementById("translateBtn");
   const restoreBtn = document.getElementById("restoreBtn");
   const autoTranslate = document.getElementById("autoTranslate");
   const statusText = document.getElementById("statusText");
   const toggleContainer = document.querySelector(".toggle-container");
   const statusDot = document.querySelector(".status-dot");
+  const progressText = document.createElement("div");
+  progressText.id = "progressText";
+  progressText.style.textAlign = "center";
+  progressText.style.marginBottom = "10px";
+  translateBtn.parentNode.insertBefore(progressText, translateBtn);
 
   if (!translateBtn) {
     console.error("translateBtn bulunamadı!");
     return;
   }
 
-  // Storage'dan ilk durumu yükle
   const { translatorActive = true, autoTranslate: autoTrans = false } =
     await chrome.storage.local.get(["translatorActive", "autoTranslate"]);
   setToggleUI(translatorActive);
   if (autoTranslate) autoTranslate.checked = autoTrans;
 
-  // Toggle için (Açık/Kapalı)
   if (toggleContainer) {
     toggleContainer.addEventListener("click", async () => {
       const isActive = statusText.textContent.includes("Kapalı");
@@ -30,14 +32,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Otomatik çeviri checkbox
   if (autoTranslate) {
     autoTranslate.addEventListener("change", async () => {
       await chrome.storage.local.set({ autoTranslate: autoTranslate.checked });
     });
   }
 
-  // ⚡ SAYFAYI ÇEVİR BUTONU - DÜZELTİLMİŞ!
   translateBtn.addEventListener("click", async () => {
     console.log("Çevir butonuna basıldı!");
     
@@ -45,24 +45,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       console.log("Aktif tab bulundu:", tab.id);
       
-      // Content script'e mesaj gönder
-      chrome.tabs.sendMessage(tab.id, { action: "translatePage" }, (response) => {
+      chrome.tabs.sendMessage(tab.id, { action: "checkContentScript" }, (response) => {
         if (chrome.runtime.lastError) {
-          console.error("Mesaj gönderme hatası:", chrome.runtime.lastError);
+          console.error("Content script yüklenemedi:", chrome.runtime.lastError);
           alert("Extension content script yüklenemedi. Sayfayı yenileyin ve tekrar deneyin.");
         } else {
-          console.log("Çeviri mesajı gönderildi");
+          chrome.tabs.sendMessage(tab.id, { action: "translatePage" });
         }
       });
-      
-      translateBtn.textContent = "Çeviriliyor...";
-      translateBtn.disabled = true;
-      
-      setTimeout(() => {
-        translateBtn.textContent = "sayfayı çevir";
-        translateBtn.disabled = false;
-        if (restoreBtn) restoreBtn.disabled = false;
-      }, 3000);
       
     } catch (error) {
       console.error("Çevir butonu hatası:", error);
@@ -70,7 +60,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Orijinali Göster butonu
   if (restoreBtn) {
     restoreBtn.addEventListener("click", async () => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -79,7 +68,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Toggle ve status güncelle
   function setToggleUI(active) {
     const toggle = document.getElementById("translatorToggle");
     if (active) {
@@ -94,4 +82,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (toggle) toggle.classList.remove("active");
     }
   }
+
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "updateProgress") {
+      progressText.textContent = request.progress;
+      if (request.progress.includes("Tamamlandı") || request.progress.includes("Hata")) {
+        translateBtn.textContent = "Sayfayı Çevir";
+        translateBtn.disabled = false;
+        if (restoreBtn) restoreBtn.disabled = false;
+      }
+    }
+  });
 });
