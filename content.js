@@ -1,171 +1,253 @@
-console.log("🚀 WikiRater VİZUEL çeviri yüklendi!");
+console.log('Content script yüklendi');
 
-// GEMİNİ API KEY - BURAYA YAZ!
-const GEMINI_API_KEY = "AIzaSyDxkdY9les2qp-cILuO3HI2MVa6UCGUdC4"; // ⬅️ BURAYA API KEY'İNİ YAZ
-
+let originalContents = new Map();
 let isTranslated = false;
-let originalTexts = new Map(); // Orijinal metinleri sakla
+let isTranslating = false;
+let translationBox = null;
 
-// Notification göster
-function showNotif(msg, type = 'info') {
-  const notif = document.createElement('div');
-  notif.style.cssText = `
-    position: fixed; top: 20px; right: 20px; z-index: 999999;
-    background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
-    color: white; padding: 15px 25px; border-radius: 10px;
-    font: bold 16px Arial; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  `;
-  notif.textContent = msg;
-  document.body.appendChild(notif);
-  setTimeout(() => notif.remove(), 3000);
+// --- MESAJ DİNLEYİCİ ---
+// Popup'tan gelen komutları dinler.
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "translatePage") {
+    visualTranslate().then(() => {
+      sendResponse({success: true});
+    }).catch(error => {
+      sendResponse({success: false, error: error.message});
+    });
+    return true; // Asenkron yanıt için önemli
+  } else if (request.action === "restorePage") {
+    // Orijinal sayfayı geri yükleme işlemi
+    originalContents.forEach((originalText, element) => {
+      element.textContent = originalText;
+      element.classList.remove('wiki-translated');
+    });
+    originalContents.clear();
+    isTranslated = false;
+    showNotification("✅ Orijinal döndürüldü");
+    sendResponse({success: true});
+  } else if (request.action === "checkContentScript") {
+    sendResponse({status: "loaded"});
+  }
+  // sendResponse'u eşzamansız kullanmak için true döndür
+  return true; 
+});
+
+
+// --- ÇEVİRİ İSTEĞİ ---
+// Background script'e çeviri için güvenli bir şekilde istek gönderir.
+function translateText(text) {
+  return new Promise((resolve) => {
+    if (!text || !text.trim()) {
+      return resolve(text);
+    }
+    chrome.runtime.sendMessage({ action: "translate", text: text }, (response) => {
+      // "Context invalidated" hatasını burada yakalarız.
+      if (chrome.runtime.lastError) {
+        console.warn("Mesajlaşma hatası (context invalidated olabilir):",
+          chrome.runtime.lastError.message);
+        // Hata durumunda orijinal metni geri döndürerek akışın devam etmesini sağla.
+        return resolve(text); 
+      }
+      
+      if (response && response.success) {
+        resolve(response.translatedText);
+      } else {
+        // API'den veya background'dan gelen diğer hatalar
+        console.error("Çeviri API hatası:", response ? response.error : "Bilinmeyen hata");
+        resolve(text); // Hata durumunda orijinal metinle devam et
+      }
+    });
+  });
 }
 
-// Tek metin çevir
-async function translateSingle(text) {
-  if (!text || text.length < 3 || !/[a-zA-Z]/.test(text)) return text;
+// --- BİLDİRİM FONKSİYONU ---
+function showNotification(message, type = 'info', duration = 3000) {
+  // Bildirim container'ını oluştur veya varsa al
+  let notificationContainer = document.getElementById('wiki-notification-container');
+  if (!notificationContainer) {
+    notificationContainer = document.createElement('div');
+    notificationContainer.id = 'wiki-notification-container';
+    notificationContainer.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999999;
+      min-width: 200px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    `;
+    document.body.appendChild(notificationContainer);
+  }
+
+  // Mevcut bildirimleri temizle
+  const existingNotifications = notificationContainer.querySelectorAll('.wiki-notification');
+  existingNotifications.forEach(el => el.remove());
+
+  // Yeni bildirimi oluştur
+  const notification = document.createElement('div');
+  notification.className = 'wiki-notification';
+  notification.textContent = message;
+  notification.style.cssText = `
+    background-color: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+    color: white;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    animation: fadeInOut 0.3s ease forwards;
+  `;
+
+  // Animasyon tanımla
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  notificationContainer.appendChild(notification);
+
+  // Belirtilen süre sonra bildirimi kaldır
+  setTimeout(() => {
+    notification.remove();
+  }, duration);
+}
+
+// --- ÇEVİRİ KUTUSU OLUŞTURMA ---
+function createTranslationBox(text, referenceElement) {
+  const box = document.createElement('div');
+  box.classList.add('wiki-translation-box');
+  box.innerHTML = `<p>${text}</p>`;
   
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Translate to Turkish only, no explanations: "${text}"`
-          }]
-        }]
-      })
+  const rect = referenceElement.getBoundingClientRect();
+  box.style.position = 'absolute';
+  box.style.left = `${rect.right + 10}px`;
+  box.style.top = `${rect.top + window.scrollY}px`;
+  box.style.width = '300px';
+  
+  document.body.appendChild(box);
+  return box;
+}
+
+// --- ÇEVİRİ KUTUSU TEMİZLEME ---
+function removeTranslationBoxes() {
+  document.querySelectorAll('.wiki-translation-box').forEach(box => box.remove());
+  translationBoxes.clear();
+}
+
+// --- METİN BULMA FONKSİYONU ---
+function getAllTextElements() {
+    const elements = [];
+    const mainContent = document.querySelector('.mw-parser-output');
+    if (!mainContent) return elements;
+
+    mainContent.querySelectorAll('p, h1, h2, h3, h4, h5, h6').forEach(el => {
+      if (!el.closest('.infobox, .navbox, .thumbcaption, .mw-editsection')) {
+        elements.push(el);
+      }
     });
 
-    const data = await response.json();
-    const translated = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    return translated || text;
-    
-  } catch (error) {
-    console.error('Çeviri hatası:', error);
-    return text;
-  }
+    return elements;
 }
 
-// ⚡ VİZUEL ÇEVİRİ - GÖRÜNÜR OLACAK!
+// --- ANA ÇEVİRİ FONKSİYONU ---
 async function visualTranslate() {
-  if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR-API-KEY")) {
-    showNotif("❌ API Key ekle!", 'error');
+  if (isTranslating) {
+    alert("Zaten çeviri yapılıyor...");
     return;
   }
 
   if (isTranslated) {
-    // GERİ DÖNDÜR
-    originalTexts.forEach((originalText, element) => {
-      element.textContent = originalText;
-    });
-    originalTexts.clear();
+    removeTranslationBoxes();
     isTranslated = false;
-    showNotif("✅ Orijinal metinler geri döndürüldü");
     return;
   }
 
-  showNotif("🚀 Görünür çeviri başlıyor...");
-  
+  isTranslating = true;
+  removeTranslationBoxes();
+
   try {
-    // Text elementleri bul - P, DIV, SPAN, H1-H6, LI
-    const selectors = 'p, div, span, h1, h2, h3, h4, h5, h6, li, td, th, a, strong, em, b, i';
-    const elements = document.querySelectorAll(selectors);
+    const elements = getAllTextElements();
     
-    const textElements = [];
-    elements.forEach(el => {
-      // Sadece direkt text içeren elementler
-      if (el.childNodes.length === 1 && el.firstChild.nodeType === Node.TEXT_NODE) {
-        const text = el.textContent.trim();
-        if (text.length > 2 && /[a-zA-Z]/.test(text) && !text.includes('©') && !text.includes('®')) {
-          textElements.push(el);
-        }
-      }
-    });
-    
-    console.log(`${textElements.length} element bulundu`);
-    
-    if (textElements.length === 0) {
-      showNotif("❌ Çevrilecek element bulunamadı!", 'error');
+    if (elements.length === 0) {
+      alert("Çevrilecek metin yok!");
+      isTranslating = false;
       return;
     }
     
-    // Paralel çeviri - VİZUEL güncellemeler
-    const batchSize = 8;
-    let completed = 0;
+    console.log(`🚀 ${elements.length} metin bulundu - Çeviri başlıyor!`);
     
-    for (let i = 0; i < textElements.length; i += batchSize) {
-      const batch = textElements.slice(i, i + batchSize);
-      
-      const promises = batch.map(async (element) => {
-        const originalText = element.textContent.trim();
-        
-        // Orijinal metni sakla
-        originalTexts.set(element, originalText);
-        
-        // Çevir
-        const translatedText = await translateSingle(originalText);
-        
-        // VİZUEL güncelleme - HEMEN görünür!
-        if (translatedText !== originalText) {
-          element.textContent = translatedText;
-          
-          // Renkli highlight - çevirildiğini göster
-          element.style.backgroundColor = '#ffffcc';
-          element.style.transition = 'background-color 0.5s';
-          
-          setTimeout(() => {
-            element.style.backgroundColor = '';
-          }, 1000);
+    for (let el of elements) {
+      const text = el.textContent.trim();
+      if (text.length > 0) {
+        try {
+          const translation = await chrome.runtime.sendMessage({action: "translate", text: text});
+          const box = createTranslationBox(translation, el);
+          translationBoxes.set(el, box);
+        } catch (error) {
+          console.error('Metin çeviri hatası:', error);
         }
-        
-        completed++;
-        console.log(`✅ Çevrildi: ${originalText.substring(0, 30)}... → ${translatedText.substring(0, 30)}...`);
-      });
-      
-      await Promise.all(promises);
-      
-      // Progress
-      const progress = Math.round((completed / textElements.length) * 100);
-      showNotif(`⚡ %${progress} tamamlandı`);
-      
-      // Kısa bekleme
-      await new Promise(resolve => setTimeout(resolve, 300));
+      }
     }
     
     isTranslated = true;
-    showNotif(`🎉 ${textElements.length} element çevrildi!`, 'success');
+    isTranslating = false;
+    
+    console.log('Çeviri tamamlandı!');
     
   } catch (error) {
-    console.error('Hata:', error);
-    showNotif("❌ Hata: " + error.message, 'error');
+    console.error('❌ Ana çeviri hatası:', error);
+    alert("Çeviri sırasında bir hata oluştu!");
+    isTranslating = false;
   }
 }
 
-// Popup'tan mesaj al
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'translatePage') {
-    visualTranslate();
-    sendResponse({success: true});
-  } else if (request.action === 'restorePage') {
-    if (isTranslated) {
-      originalTexts.forEach((originalText, element) => {
-        element.textContent = originalText;
-      });
-      originalTexts.clear();
-      isTranslated = false;
-      showNotif("✅ Orijinal geri döndürüldü");
+// --- SAYFA YÜKLENDİĞİNDE OTOMATİK ÇEVİRİ KONTROLÜ ---
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    chrome.storage.local.get(['translatorActive', 'autoTranslate'], (result) => {
+      const { translatorActive = true, autoTranslate = false } = result;
+      if (translatorActive && autoTranslate && !isTranslated) {
+        console.log("Otomatik çeviri başlatılıyor...");
+        setTimeout(() => {
+          visualTranslate();
+        }, 2000); // 2 saniye bekle
+      }
+    });
+  });
+} else {
+  chrome.storage.local.get(['translatorActive', 'autoTranslate'], (result) => {
+    const { translatorActive = true, autoTranslate = false } = result;
+    if (translatorActive && autoTranslate && !isTranslated) {
+      console.log("Otomatik çeviri başlatılıyor...");
+      setTimeout(() => {
+        visualTranslate();
+      }, 2000); // 2 saniye bekle
     }
-    sendResponse({success: true});
+  });
+}
+
+// --- SCROLL OLAYI ---
+window.addEventListener('scroll', () => {
+  if (isTranslated) {
+    translationBoxes.forEach((box, el) => {
+      const rect = el.getBoundingClientRect();
+      box.style.top = `${rect.top + window.scrollY}px`;
+    });
   }
 });
 
-// Kısayol
-document.addEventListener('keydown', function(e) {
-  if (e.ctrlKey && e.altKey && e.key === 't') {
-    e.preventDefault();
-    visualTranslate();
-  }
-});
+const translationBoxes = new Map();
 
-showNotif("💡 VİZUEL çeviri hazır!");
+console.log("WikiRater content script hazır");
